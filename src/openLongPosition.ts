@@ -1,6 +1,6 @@
 import { GmxSdk } from "@gmx-io/sdk";
-import type { MarketInfo } from "@gmx-io/sdk/types/markets.js";
-import type { TokenData } from "@gmx-io/sdk/types/tokens.js";
+import type { MarketInfo, MarketsInfoData } from "@gmx-io/sdk/types/markets.js";
+import type { TokenData, TokensData } from "@gmx-io/sdk/types/tokens.js";
 import "dotenv/config";
 import { Wallet } from 'ethers';
 
@@ -60,10 +60,10 @@ let selectedToken: TokenData | null = null;
 
 // Print markets
 console.log('Markets:');
-Object.entries(marketsInfoData).forEach(([marketAddress, market]: any) => {
+Object.entries(marketsInfoData as MarketsInfoData).forEach(([marketAddress, market]) => {
   console.log(`- ${market.name}: ${marketAddress}`);
   if (market.name === MARKET_NAME) {
-    selectedMarket = market;
+    selectedMarket = market as MarketInfo;
   }
 });
 
@@ -71,10 +71,10 @@ Object.entries(marketsInfoData).forEach(([marketAddress, market]: any) => {
 console.log();
 console.log('Tokens:');
 
-Object.entries(tokensData).forEach(([tokenAddress, token]: any) => {
+Object.entries(tokensData as TokensData).forEach(([tokenAddress, token]) => {
   console.log(`- ${token.symbol}: ${tokenAddress}`);
   if (token.symbol === COLLATERAL_TOKEN_SYMBOL) {
-    selectedToken = token;
+    selectedToken = token as TokenData;
   }
 });
 
@@ -89,18 +89,18 @@ if (selectedToken === null) {
 
 // Ignore the ts errors below. The SDK is probably just mistyped
 sdk.orders.createIncreaseOrder({
-  marketsInfoData: marketsInfoData!,
+  marketsInfoData: marketsInfoData,
   tokensData,
   isLimit: false,
   isLong: true,
-  marketAddress: selectedMarket.marketTokenAddres,
+  marketAddress: (selectedMarket as MarketInfo).marketTokenAddress,
   allowedSlippage: 50,
   collateralToken: selectedToken,
-  collateralTokenAddress: selectedToken.address,
-  receiveTokenAddress: selectedToken.address,
+  collateralTokenAddress: (selectedToken as TokenData).address,
+  receiveTokenAddress: (selectedToken as TokenData).address,
   fromToken: selectedToken,
   marketInfo: selectedMarket,
-  indexToken: selectedMarket.indexToken,
+  indexToken: (selectedMarket as MarketInfo).indexToken,
   increaseAmounts: {
     initialCollateralAmount: 3000000n,
     initialCollateralUsd: 2999578868393486100000000000000n,

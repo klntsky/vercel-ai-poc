@@ -1,10 +1,50 @@
-import type { IncreasePositionAmounts } from "@gmx-io/sdk/types/orders";    
 import { GmxSdk } from "@gmx-io/sdk";
+import type { MarketInfo } from "@gmx-io/sdk/types/markets.js";
+import type { TokenData } from "@gmx-io/sdk/types/tokens.js";
+import "dotenv/config";
+import { Wallet } from 'ethers';
+
+// Configuration
+
+const MARKET_NAME = 'BTC/USD [BTC-USDC]';
+const COLLATERAL_TOKEN_SYMBOL = 'USDC';
+
+// Reading the environment
+
+const readPrivateKeyAddress = (): string => {
+  const PRIVATE_KEY = process.env.PRIVATE_KEY || (() => {
+    throw new Error("No PRIVATE_KEY found in the environment");
+  })();
+
+  const wallet = new Wallet(PRIVATE_KEY);
+  return wallet.address;
+}
+
+const readWalletAddress = (): string => {
+  const WALLET_ADDRESS = process.env.WALLET_ADDRESS || (() => {
+    throw new Error("No WALLET_ADDRESS found in the environment");
+  })();
+
+  return WALLET_ADDRESS;
+}
+
+const getWalletAddress = (): string => {
+  try {
+    return readPrivateKeyAddress();
+  } catch (e) {
+    return readWalletAddress();
+  }
+};
+
+console.log('Address:', getWalletAddress());
+
+// Initializing the SDK
 
 const sdk = new GmxSdk({
   chainId: 42161,
   rpcUrl: "https://arb1.arbitrum.io/rpc",
   oracleUrl: "https://arbitrum-api.gmxinfra.io",
+  account: getWalletAddress(),
 });
 
 const { marketsInfoData, tokensData } = await sdk.markets.getMarketsInfo();
@@ -13,21 +53,54 @@ if (!marketsInfoData || !tokensData) {
   throw new Error("No markets or tokens info data");
 }
 
-const marketInfo = marketsInfoData["0x47c031236e19d024b42f8AE6780E44A573170703"];
-const collateralToken = tokensData["0x912CE59144191C1204E64559FE8253a0e49E6548"];
+// Finding the needed markets
+
+let selectedMarket: MarketInfo | null = null;
+let selectedToken: TokenData | null = null;
+
+// Print markets
+console.log('Markets:');
+Object.entries(marketsInfoData).forEach(([marketAddress, market]: any) => {
+  console.log(`- ${market.name}: ${marketAddress}`);
+  if (market.name === MARKET_NAME) {
+    selectedMarket = market;
+  }
+});
+
+// Print tokens
+console.log();
+console.log('Tokens:');
+
+Object.entries(tokensData).forEach(([tokenAddress, token]: any) => {
+  console.log(`- ${token.symbol}: ${tokenAddress}`);
+  if (token.symbol === COLLATERAL_TOKEN_SYMBOL) {
+    selectedToken = token;
+  }
+});
+
+// Ensure the needed markets exist
+if (selectedMarket === null) {
+  throw new Error(`Market not found for ${MARKET_NAME}`);
+}
+
+if (selectedToken === null) {
+  throw new Error(`Token not found by symbol ${COLLATERAL_TOKEN_SYMBOL}`);
+}
+
+// Ignore the ts errors below. The SDK is probably just mistyped
 sdk.orders.createIncreaseOrder({
   marketsInfoData: marketsInfoData!,
   tokensData,
   isLimit: false,
   isLong: true,
-  marketAddress: marketInfo.marketTokenAddress,
+  marketAddress: selectedMarket.marketTokenAddres,
   allowedSlippage: 50,
-  collateralToken,
-  collateralTokenAddress: collateralToken.address,
-  receiveTokenAddress: collateralToken.address,
-  fromToken: tokensData["0x912CE59144191C1204E64559FE8253a0e49E6548"],
-  marketInfo,
-  indexToken: marketInfo.indexToken,
+  collateralToken: selectedToken,
+  collateralTokenAddress: selectedToken.address,
+  receiveTokenAddress: selectedToken.address,
+  fromToken: selectedToken,
+  marketInfo: selectedMarket,
+  indexToken: selectedMarket.indexToken,
   increaseAmounts: {
     initialCollateralAmount: 3000000n,
     initialCollateralUsd: 2999578868393486100000000000000n,

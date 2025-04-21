@@ -11,7 +11,7 @@
     "analyze": "ts-node-esm src/cli.ts",
     "build:esbuild": "node build.cjs",
     "sample": "npm run build:esbuild && node dist/sample.cjs",
-    "long-position": "esbuild src/openLongPosition.ts --bundle --platform=node --format=cjs --outfile=dist/openLongPosition.cjs && node dist/openLongPosition.cjs"
+    "long-position": "tsx src/openLongPosition.ts"
   },
   "keywords": [],
   "author": "",
